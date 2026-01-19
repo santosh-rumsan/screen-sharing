@@ -3,11 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Users } from "lucide-react";
 import Link from "next/link";
 import Peer from "peerjs";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export default function JoinPage() {
     const [roomId, setRoomId] = useState("");
@@ -15,7 +15,6 @@ export default function JoinPage() {
     const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const peerRef = useRef<Peer | null>(null);
-    const { toast } = useToast();
 
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
     const [recordingChunks, setRecordingChunks] = useState<Blob[]>([]);
@@ -48,10 +47,8 @@ export default function JoinPage() {
 
     function joinRoom(roomIdToJoin: string = roomId) {
         if (!roomIdToJoin.trim()) {
-            toast({
-                title: "Room code required",
-                description: "Please enter a valid room code.",
-                variant: "destructive"
+            toast.error("Room code required", {
+                description: "Please enter a valid room code."
             });
             return;
         }
@@ -65,8 +62,7 @@ export default function JoinPage() {
             const connection = peer.connect(roomIdToJoin);
 
             connection.on("open", () => {
-                toast({
-                    title: "Connected!",
+                toast.success("Connected!", {
                     description: "Waiting for host to share their screen..."
                 });
             });
@@ -82,10 +78,8 @@ export default function JoinPage() {
                 setIsConnecting(false);
                 setRoomId("");
                 setActiveStream(null);
-                toast({
-                    title: "Disconnected",
-                    description: "The session has been ended.",
-                    variant: "destructive"
+                toast.error("Disconnected", {
+                    description: "The session has been ended."
                 });
             });
         });
@@ -93,10 +87,8 @@ export default function JoinPage() {
         peer.on("error", (err) => {
             console.error("Peer error:", err);
             setIsConnecting(false);
-            toast({
-                title: "Connection failed",
-                description: "Could not connect to the room. Please check the room code and try again.",
-                variant: "destructive"
+            toast.error("Connection failed", {
+                description: "Could not connect to the room. Please check the room code and try again."
             });
         });
     }
@@ -194,61 +186,37 @@ export default function JoinPage() {
     }
 
     return (
-        <div className="py-8 px-4">
-            <div className="max-w-2xl mx-auto space-y-8">
-                <Button variant="outline" asChild>
-                    <Link href="/" className="flex items-center gap-2">
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Home
-                    </Link>
-                </Button>
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-8">
+            <Button variant="outline" asChild>
+                <Link href="/" className="flex items-center self-start">
+                    <ArrowLeft />
+                    Back to Home
+                </Link>
+            </Button>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Users className="h-6 w-6" />
-                            Join a Room
-                        </CardTitle>
-                        <CardDescription>Enter the room code to join and view the shared screen</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {!activeStream ? (
-                            <div className="space-y-4">
-                                <Input placeholder="Enter room code" value={roomId} onChange={(e) => setRoomId(e.target.value)} disabled={isConnecting} />
-                                <Button className="w-full" onClick={() => joinRoom()} disabled={isConnecting || !roomId.trim()}>
-                                    {isConnecting ? "Connecting..." : "Join Room"}
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden group">
-                                    <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline loop controls />
-                                </div>
-                                <div className="flex gap-4">
-                                    <Button
-                                        onClick={() => {
-                                            if (activeStream) {
-                                                startRecording();
-                                            } else {
-                                                toast({
-                                                    title: "No Stream Available",
-                                                    description: "There is no active stream to record.",
-                                                    variant: "destructive"
-                                                });
-                                            }
-                                        }}
-                                        disabled={isRecording}>
-                                        Start Recording
-                                    </Button>
-                                    <Button onClick={stopRecording} disabled={!isRecording}>
-                                        Stop Recording
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users />
+                        Join a Room
+                    </CardTitle>
+                    <CardDescription>Enter the room code to join and view the shared screen</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {!activeStream ? (
+                        <div className="flex flex-col gap-4">
+                            <Input placeholder="Enter room code" value={roomId} onChange={(e) => setRoomId(e.target.value)} disabled={isConnecting} />
+                            <Button className="w-full" onClick={() => joinRoom()} disabled={isConnecting || !roomId.trim()}>
+                                {isConnecting ? "Connecting..." : "Join Room"}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="relative overflow-hidden rounded-lg">
+                            <video ref={videoRef} className="h-full w-full object-contain" autoPlay playsInline loop controls muted />
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }
